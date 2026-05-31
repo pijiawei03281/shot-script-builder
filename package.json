@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "build": "tsc --noEmit && vite build --base /shot-script-builder/",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "npm run typecheck && npm run build"
   },
   "dependencies": {
     "konva": "^9.3.20",
