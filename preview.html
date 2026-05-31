@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shot Builder Preview</title>
+    <style>
+      :root { font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif; color: #17212b; background: #f5f7f8; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 1120px; }
+      button, input, select, textarea { font: inherit; }
+      .app { display: grid; grid-template-columns: 280px 1fr 340px; min-height: 100vh; }
+      aside { background: white; padding: 22px; border-right: 1px solid #dfe5ea; overflow-y: auto; }
+      aside:last-child { border-right: 0; border-left: 1px solid #dfe5ea; }
+      h1, h2, p { margin: 0; }
+      h1 { font-size: 22px; }
+      h2 { margin: 22px 0 10px; font-size: 15px; }
+      .brand { font-size: 20px; font-weight: 800; }
+      .brand span { display: block; margin-top: 3px; font-size: 13px; color: #657484; font-weight: 500; }
+      .preset { width: 100%; min-height: 58px; margin: 8px 0; border: 0; border-radius: 8px; padding: 10px; background: #f1f5f7; text-align: left; cursor: pointer; }
+      .preset strong, .preset small { display: block; }
+      .preset small { color: #657484; margin-top: 4px; }
+      main { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; }
+      header { display: flex; justify-content: space-between; align-items: center; padding: 22px 28px; background: white; border-bottom: 1px solid #dfe5ea; }
+      header p { color: #657484; margin-top: 5px; }
+      canvas { display: block; background: #eef1f4; box-shadow: 0 16px 38px rgba(23, 33, 43, .13); }
+      .canvas-wrap { display: grid; place-items: center; gap: 14px; padding: 24px; overflow: auto; }
+      #reference { width: min(900px, 100%); max-height: 260px; object-fit: contain; border-radius: 8px; background: #111827; border: 1px solid #d7e0e6; }
+      .timeline { padding: 16px 24px 22px; border-top: 1px solid #dfe5ea; background: white; }
+      .timeline-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+      .shot-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(180px, 220px); gap: 10px; overflow-x: auto; }
+      .shot-card { border: 1px solid #d7e0e6; border-radius: 8px; padding: 12px; background: #f8fafb; cursor: pointer; }
+      .shot-card.active { border-color: #1f7a8c; box-shadow: inset 0 0 0 2px rgba(31,122,140,.22); }
+      .shot-card span, .shot-card small { display: block; color: #657484; font-size: 12px; }
+      .shot-card strong { display: block; margin: 5px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .shot-order { display: flex; gap: 6px; margin-top: 8px; }
+      label { display: grid; gap: 7px; margin-top: 12px; color: #43515f; font-size: 13px; font-weight: 700; }
+      input, select, textarea { width: 100%; border: 1px solid #cfd8df; border-radius: 8px; padding: 10px; }
+      input[type="range"] { padding: 0; accent-color: #1f7a8c; }
+      textarea { height: 230px; resize: vertical; line-height: 1.5; }
+      .action, .mini { border: 0; border-radius: 8px; padding: 10px 13px; background: #1f7a8c; color: white; font-weight: 800; cursor: pointer; }
+      .mini { padding: 6px 9px; background: #17212b; font-size: 12px; }
+      .dark { width: 100%; margin-top: 10px; background: #17212b; }
+      .hint, .term p { margin-top: 10px; color: #657484; font-size: 13px; line-height: 1.5; }
+      .term { border: 1px solid #cfe2e7; border-radius: 8px; padding: 14px; background: #f0f8fa; }
+      .term strong { display: block; color: #1f7a8c; font-size: 17px; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside>
+        <div class="brand">Shot Builder<span>免安裝互動預覽</span></div>
+        <h2>鏡頭積木</h2>
+        <button class="preset" data-camera="orbit"><strong>弧線跟拍</strong><small>orbit / 35mm / handheld</small></button>
+        <button class="preset" data-camera="dolly"><strong>向前推鏡</strong><small>dolly / 50mm / stable</small></button>
+        <button class="preset" data-camera="truck"><strong>水平移動</strong><small>truck / 28mm / stable</small></button>
+        <h2>打光積木</h2>
+        <button class="preset" data-light="key"><strong>主光</strong><small>warm soft key</small></button>
+        <button class="preset" data-light="back"><strong>輪廓光</strong><small>cool rim light</small></button>
+        <button class="preset" data-light="neon"><strong>霓虹環境光</strong><small>visible cyan neon</small></button>
+        <h2>場景積木</h2>
+        <button class="preset" data-prop="car"><strong>車</strong><small>blocking object</small></button>
+        <button class="preset" data-prop="window"><strong>窗</strong><small>motivated light source</small></button>
+        <button class="preset" data-prop="product"><strong>產品</strong><small>hero object</small></button>
+        <button class="preset" data-prop="streetlight"><strong>路燈</strong><small>environment source</small></button>
+        <h2>鏡頭卡片庫</h2>
+        <button class="preset" data-template="lonely"><strong>孤獨夜行</strong><small>arc track + cool rim</small></button>
+        <button class="preset" data-template="hero"><strong>英雄登場</strong><small>push-in + warm key</small></button>
+        <button class="preset" data-template="product"><strong>產品高光</strong><small>close-up product glow</small></button>
+        <p class="hint">可拖拉人物、攝影機起點/終點/控制點、燈光位置，以及白色小圓點調整光照方向。</p>
+      </aside>
+      <main>
+        <header>
+          <div>
+            <h1 id="title">雪夜街頭弧線跟拍</h1>
+            <p id="subtitle">night exterior · snow-covered city street</p>
+          </div>
+          <div>
+            <input id="loadFile" type="file" accept="application/json" hidden />
+            <input id="refFile" type="file" accept="image/*" hidden />
+            <button class="action" id="loadProject">載入</button>
+            <button class="action" id="saveProject">儲存 JSON</button>
+            <button class="action" id="addRef">參考圖</button>
+            <button class="action" id="reset">重置</button>
+          </div>
+        </header>
+        <div class="canvas-wrap"><img id="reference" hidden /><canvas id="board" width="900" height="620"></canvas></div>
+        <div class="timeline">
+          <div class="timeline-head"><strong>鏡頭時間線</strong><button class="action" id="addShot">新增 Shot</button></div>
+          <div class="shot-strip" id="shotStrip"></div>
+        </div>
+      </main>
+      <aside>
+        <section class="term">
+          <h2>術語自動判斷</h2>
+          <strong id="term">arc dolly / orbit tracking shot</strong>
+          <p id="termNote">The path curves around the subject.</p>
+        </section>
+        <h2>鏡頭參數</h2>
+        <label>運鏡
+          <select id="movement"><option>orbit</option><option>dolly</option><option>truck</option><option>pan</option><option>tilt</option><option>static</option><option>handheld</option></select>
+        </label>
+        <label>景別
+          <select id="scale"><option>wide</option><option selected>medium-wide</option><option>medium</option><option>close-up</option><option>extreme close-up</option></select>
+        </label>
+        <label>焦段 <span id="lensText">35mm</span><input id="lens" type="range" min="18" max="100" value="35" /></label>
+        <label>時長 <span id="durationText">6s</span><input id="duration" type="range" min="1" max="18" value="6" /></label>
+        <h2>打光參數</h2>
+        <label>強度 <span id="intensityText">72%</span><input id="intensity" type="range" min="0" max="100" value="72" /></label>
+        <label>柔硬度 <span id="softnessText">64%</span><input id="softness" type="range" min="0" max="100" value="64" /></label>
+        <label>光錐角度 <span id="spreadText">46°</span><input id="spread" type="range" min="18" max="110" value="46" /></label>
+        <label>顏色<input id="lightColor" type="color" value="#ffd7a3" /></label>
+        <h2>自動生成</h2>
+        <label>輸出格式
+          <select id="format"><option value="director">導演分鏡</option><option value="ai">AI prompt</option><option value="shotlist">Shot list</option><option value="lighting">Lighting plan</option><option value="edit">剪輯節奏</option></select>
+        </label>
+        <section class="term"><strong>邏輯檢查</strong><p id="logicNote"></p></section>
+        <textarea id="prompt" readonly></textarea>
+        <button class="action dark" id="copy">複製描述</button>
+      </aside>
+    </div>
+    <script>
+      const canvas = document.getElementById("board");
+      const ctx = canvas.getContext("2d");
+      const controls = {
+        movement: document.getElementById("movement"),
+        scale: document.getElementById("scale"),
+        lens: document.getElementById("lens"),
+        duration: document.getElementById("duration"),
+        intensity: document.getElementById("intensity"),
+        softness: document.getElementById("softness"),
+        spread: document.getElementById("spread"),
+        lightColor: document.getElementById("lightColor"),
+        prompt: document.getElementById("prompt")
+      };
+      const propPresets = {
+        car: { kind: "car", name: "車", w: 92, h: 38, color: "#506070" },
+        window: { kind: "window", name: "窗", w: 74, h: 54, color: "#7cc7ff" },
+        product: { kind: "product", name: "產品", w: 38, h: 38, color: "#f2c14e" },
+        streetlight: { kind: "streetlight", name: "路燈", w: 26, h: 86, color: "#ffd166" }
+      };
+      const presets = {
+        orbit: { movement: "orbit", start: { x: 260, y: 480 }, control: { x: 470, y: 390 }, end: { x: 660, y: 190 }, lens: 35, duration: 6, handheld: true },
+        dolly: { movement: "dolly", start: { x: 450, y: 520 }, control: { x: 450, y: 380 }, end: { x: 450, y: 250 }, lens: 50, duration: 4, handheld: false },
+        truck: { movement: "truck", start: { x: 210, y: 360 }, control: { x: 450, y: 360 }, end: { x: 690, y: 360 }, lens: 28, duration: 5, handheld: false }
+      };
+      let project, selected, drag;
+      function baseShot(id = "shot-1", title = "雪夜街頭弧線跟拍") {
+        return {
+          id, title, location: "snow-covered city street", mood: "lonely", time: "night exterior",
+          subject: { x: 475, y: 310, name: "主角" },
+          camera: { id: "camera-1", scale: "medium-wide", ...structuredClone(presets.orbit) },
+          reference: "",
+          props: [{ id: "prop-1", ...propPresets.car, x: 650, y: 390 }],
+          lights: [
+            { id: "light-1", kind: "key", x: 290, y: 190, tx: 475, ty: 340, color: "#ffd7a3", intensity: 72, softness: 64, spread: 46, visible: false },
+            { id: "light-2", kind: "back", x: 610, y: 180, tx: 475, ty: 340, color: "#8fc7ff", intensity: 86, softness: 28, spread: 34, visible: false },
+            { id: "light-3", kind: "neon", x: 735, y: 310, tx: 520, ty: 350, color: "#49f2ff", intensity: 58, softness: 48, spread: 70, visible: true }
+          ]
+        };
+      }
+      function activeShot() { return project.shots.find(s => s.id === project.activeId); }
+      function reset() {
+        project = { activeId: "shot-1", shots: [baseShot()] };
+        selected = { type: "camera", id: "camera-1" };
+        drag = null;
+        syncControls(); draw();
+      }
+      function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+      function infer(camera) {
+        const dx = camera.end.x - camera.start.x, dy = camera.end.y - camera.start.y;
+        const travel = Math.hypot(dx, dy);
+        const direct = Math.max(1, dist(camera.start, camera.end));
+        const bend = (dist(camera.start, camera.control) + dist(camera.control, camera.end)) / direct;
+        if (travel < 36) return ["pan / locked-off adjustment", "The camera barely travels, so this reads as fixed-position rotation."];
+        if (bend > 1.14) return ["arc dolly / orbit tracking shot", "The path curves around the subject, so it is more specific than pan."];
+        if (Math.abs(dy) > Math.abs(dx) * 1.35) return ["dolly in / dolly out", "The camera travels mostly along the subject axis."];
+        if (Math.abs(dx) > Math.abs(dy) * 1.35) return ["truck / lateral tracking shot", "The camera physically moves sideways across the scene."];
+        return ["diagonal tracking shot", "The camera travels on both axes without a strong curve."];
+      }
+      function hexToRgba(hex, alpha) {
+        const n = parseInt(hex.slice(1), 16);
+        return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+      }
+      function drawGrid() {
+        ctx.fillStyle = "#eef1f4"; ctx.fillRect(0, 0, 900, 620);
+        ctx.strokeStyle = "#d6dde4"; ctx.lineWidth = 1;
+        for (let y = 0; y <= 620; y += 68) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(900, y); ctx.stroke(); }
+        for (let x = 0; x <= 900; x += 68) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 620); ctx.stroke(); }
+      }
+      function circle(x, y, r, fill, stroke = "white") {
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = stroke; ctx.stroke();
+      }
+      function drawCone(l) {
+        const angle = Math.atan2(l.ty - l.y, l.tx - l.x), spread = l.spread * Math.PI / 180, len = 180 + l.intensity * 2.2;
+        const left = angle - spread / 2, right = angle + spread / 2;
+        ctx.beginPath(); ctx.moveTo(l.x, l.y); ctx.lineTo(l.x + Math.cos(left) * len, l.y + Math.sin(left) * len); ctx.lineTo(l.x + Math.cos(right) * len, l.y + Math.sin(right) * len); ctx.closePath();
+        ctx.fillStyle = hexToRgba(l.color, .16 + l.intensity / 700); ctx.fill();
+        ctx.setLineDash([6, 6]); ctx.strokeStyle = l.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(l.x, l.y); ctx.lineTo(l.tx, l.ty); ctx.stroke(); ctx.setLineDash([]);
+      }
+      function draw() {
+        const shot = activeShot(), c = shot.camera;
+        drawGrid();
+        shot.lights.forEach(drawCone);
+        shot.props.forEach(p => {
+          ctx.fillStyle = p.color; ctx.strokeStyle = selected.id === p.id ? "#111827" : "white"; ctx.lineWidth = 3;
+          ctx.globalAlpha = .78; ctx.beginPath(); ctx.roundRect(p.x - p.w / 2, p.y - p.h / 2, p.w, p.h, 4); ctx.fill(); ctx.globalAlpha = 1; ctx.stroke();
+          ctx.fillStyle = "#17212b"; ctx.font = "11px sans-serif"; ctx.textAlign = "center"; ctx.fillText(p.name, p.x, p.y + p.h / 2 + 16); ctx.textAlign = "left";
+        });
+        ctx.setLineDash([10, 8]); ctx.strokeStyle = selected.type === "camera" ? "#1f7a8c" : "#43515f"; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(c.start.x, c.start.y); ctx.quadraticCurveTo(c.control.x, c.control.y, c.end.x, c.end.y); ctx.stroke(); ctx.setLineDash([]);
+        circle(c.start.x, c.start.y, 16, "#17212b"); circle(c.end.x, c.end.y, 16, "#e4572e"); circle(c.control.x, c.control.y, 11, "white", "#1f7a8c");
+        ctx.fillStyle = "#17212b"; ctx.font = "12px sans-serif"; ctx.fillText("START", c.start.x - 30, c.start.y + 34); ctx.fillText("END", c.end.x - 20, c.end.y + 34);
+        shot.lights.forEach(l => {
+          circle(l.tx, l.ty, 9, "white", l.color);
+          circle(l.x, l.y, 22, l.color, selected.id === l.id ? "#111827" : "white");
+          ctx.fillStyle = "#17212b"; ctx.font = "10px sans-serif"; ctx.textAlign = "center"; ctx.fillText(l.kind.toUpperCase(), l.x, l.y + 36); ctx.textAlign = "left";
+        });
+        const s = shot.subject;
+        ctx.strokeStyle = "#111827"; ctx.fillStyle = "#111827"; ctx.lineCap = "round";
+        circle(s.x, s.y, 19, "#111827", "#111827");
+        ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(s.x, s.y + 18); ctx.lineTo(s.x, s.y + 62); ctx.stroke();
+        ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(s.x - 22, s.y + 38); ctx.lineTo(s.x + 22, s.y + 38); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(s.x - 17, s.y + 92); ctx.lineTo(s.x, s.y + 62); ctx.lineTo(s.x + 17, s.y + 92); ctx.stroke();
+        ctx.font = "13px sans-serif"; ctx.textAlign = "center"; ctx.fillText(s.name, s.x, s.y + 112); ctx.textAlign = "left";
+        updatePrompt(); renderTimeline();
+      }
+      function hit(x, y) {
+        const shot = activeShot(), c = shot.camera;
+        for (const [part, p] of [["start", c.start], ["end", c.end], ["control", c.control]]) if (Math.hypot(x - p.x, y - p.y) < 22) return { type: "camera", id: "camera-1", part };
+        for (const l of shot.lights) if (Math.hypot(x - l.tx, y - l.ty) < 16) return { type: "lightTarget", id: l.id };
+        for (const l of shot.lights) if (Math.hypot(x - l.x, y - l.y) < 26) return { type: "light", id: l.id };
+        for (const p of shot.props) if (x > p.x - p.w / 2 && x < p.x + p.w / 2 && y > p.y - p.h / 2 && y < p.y + p.h / 2) return { type: "prop", id: p.id };
+        if (Math.hypot(x - shot.subject.x, y - (shot.subject.y + 45)) < 60) return { type: "subject", id: "subject-1" };
+        return null;
+      }
+      function pos(event) { const rect = canvas.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top }; }
+      canvas.addEventListener("pointerdown", event => { const p = pos(event); drag = hit(p.x, p.y); if (drag) { selected = drag; syncControls(); draw(); } });
+      canvas.addEventListener("pointermove", event => {
+        if (!drag) return;
+        const p = pos(event), shot = activeShot();
+        if (drag.type === "camera") shot.camera[drag.part] = p;
+        if (drag.type === "light") { const l = shot.lights.find(item => item.id === drag.id); l.x = p.x; l.y = p.y; }
+        if (drag.type === "lightTarget") { const l = shot.lights.find(item => item.id === drag.id); l.tx = p.x; l.ty = p.y; }
+        if (drag.type === "prop") { const prop = shot.props.find(item => item.id === drag.id); prop.x = p.x; prop.y = p.y; }
+        if (drag.type === "subject") { shot.subject.x = p.x; shot.subject.y = p.y - 45; }
+        draw();
+      });
+      window.addEventListener("pointerup", () => drag = null);
+      function selectedLight() { return activeShot().lights.find(l => l.id === selected.id) || activeShot().lights[0]; }
+      function syncControls() {
+        const shot = activeShot(), c = shot.camera, light = selectedLight();
+        shot.props ||= []; shot.reference ||= "";
+        controls.movement.value = c.movement; controls.scale.value = c.scale; controls.lens.value = c.lens; controls.duration.value = c.duration;
+        controls.intensity.value = light.intensity; controls.softness.value = light.softness; controls.spread.value = light.spread; controls.lightColor.value = light.color;
+        document.getElementById("title").textContent = shot.title; document.getElementById("subtitle").textContent = `${shot.time} · ${shot.location}`;
+        const img = document.getElementById("reference"); img.src = shot.reference || ""; img.hidden = !shot.reference;
+        document.getElementById("lensText").textContent = `${c.lens}mm`; document.getElementById("durationText").textContent = `${c.duration}s`;
+        document.getElementById("intensityText").textContent = `${light.intensity}%`; document.getElementById("softnessText").textContent = `${light.softness}%`; document.getElementById("spreadText").textContent = `${light.spread}°`;
+      }
+      function updatePrompt() {
+        const shot = activeShot(), c = shot.camera, [term, note] = infer(c);
+        document.getElementById("term").textContent = term; document.getElementById("termNote").textContent = note;
+        const logic = [];
+        if (project.shots.length === 1) logic.push("只有一個 shot，可以再加建立空間或反應鏡頭。");
+        if (!project.shots.some(s => ["wide", "medium-wide"].includes(s.camera.scale))) logic.push("缺少較寬的 establishing shot。");
+        if (!shot.lights.length) logic.push("目前沒有燈光。");
+        if (!logic.length) logic.push("鏡頭邏輯目前看起來順。");
+        document.getElementById("logicNote").textContent = logic.join(" ");
+        const format = document.getElementById("format").value;
+        const lights = shot.lights.map(l => `${l.kind} light aimed at (${Math.round(l.tx)}, ${Math.round(l.ty)}), ${l.intensity}% intensity, ${l.softness}% softness, ${l.spread} degree spread, ${l.color}${l.visible ? ", visible in frame" : ""}`).join("; ");
+        const props = shot.props.map(p => `${p.name} at (${Math.round(p.x)}, ${Math.round(p.y)})`).join("; ");
+        if (format === "shotlist") {
+          controls.prompt.value = project.shots.map((s, i) => `${i + 1}. ${s.title} | ${infer(s.camera)[0]} | ${s.camera.scale} | ${s.camera.lens}mm | ${s.camera.duration}s`).join("\n");
+          return;
+        }
+        if (format === "lighting") {
+          controls.prompt.value = project.shots.map((s, i) => `SHOT ${i + 1} - ${s.title}\n${s.lights.map(l => `${l.kind}: ${l.color}, ${l.intensity}% intensity, ${l.spread} degree spread`).join("; ")}`).join("\n\n");
+          return;
+        }
+        if (format === "edit") {
+          controls.prompt.value = project.shots.map((s, i) => `${i + 1}. Hold ${s.camera.duration}s. Cut on ${s.mood} beat. Movement: ${infer(s.camera)[0]}.`).join("\n");
+          return;
+        }
+        const lines = [
+          `${shot.time}, ${shot.location}. Mood: ${shot.mood}.`,
+          `主角 stands near center frame while camera performs ${c.movement} movement from (${Math.round(c.start.x)}, ${Math.round(c.start.y)}) to (${Math.round(c.end.x)}, ${Math.round(c.end.y)}).`,
+          `Auto terminology: ${term}. ${note}`,
+          `${c.scale} shot, ${c.lens}mm lens, ${c.duration}s duration${c.handheld ? ", subtle handheld sway" : ", stabilized movement"}.`,
+          `Scene objects: ${props || "none"}.`,
+          `Lighting plan: ${lights}.`
+        ];
+        controls.prompt.value = format === "ai" ? lines.join(" ") : lines.join("\n");
+      }
+      function renderTimeline() {
+        const strip = document.getElementById("shotStrip");
+        strip.innerHTML = "";
+        project.shots.forEach((shot, index) => {
+          const card = document.createElement("div");
+          card.className = `shot-card ${shot.id === project.activeId ? "active" : ""}`;
+          card.innerHTML = `<span>Shot ${index + 1}</span><strong>${shot.title}</strong><small>${shot.camera.duration}s · ${infer(shot.camera)[0]}</small><div class="shot-order"><button class="mini" data-dir="-1">Up</button><button class="mini" data-dir="1">Down</button></div>`;
+          card.addEventListener("click", () => { project.activeId = shot.id; selected = { type: "camera", id: "camera-1" }; syncControls(); draw(); });
+          card.querySelectorAll("button").forEach(button => button.addEventListener("click", event => {
+            event.stopPropagation();
+            const dir = Number(button.dataset.dir), from = project.shots.findIndex(s => s.id === shot.id), to = from + dir;
+            if (to >= 0 && to < project.shots.length) project.shots.splice(to, 0, project.shots.splice(from, 1)[0]);
+            draw();
+          }));
+          strip.appendChild(card);
+        });
+      }
+      for (const id of ["movement", "scale", "lens", "duration"]) controls[id].addEventListener("input", () => {
+        const c = activeShot().camera;
+        c.movement = controls.movement.value; c.scale = controls.scale.value; c.lens = Number(controls.lens.value); c.duration = Number(controls.duration.value);
+        syncControls(); draw();
+      });
+      for (const id of ["intensity", "softness", "spread", "lightColor"]) controls[id].addEventListener("input", () => {
+        const light = selectedLight();
+        light.intensity = Number(controls.intensity.value); light.softness = Number(controls.softness.value); light.spread = Number(controls.spread.value); light.color = controls.lightColor.value;
+        syncControls(); draw();
+      });
+      document.querySelectorAll("[data-camera]").forEach(button => button.addEventListener("click", () => {
+        activeShot().camera = { id: "camera-1", scale: "medium-wide", ...structuredClone(presets[button.dataset.camera]) };
+        selected = { type: "camera", id: "camera-1" }; syncControls(); draw();
+      }));
+      document.querySelectorAll("[data-light]").forEach(button => button.addEventListener("click", () => {
+        const map = { key: ["key", "#ffd7a3", 72, 64, 46], back: ["back", "#8fc7ff", 86, 28, 34], neon: ["neon", "#49f2ff", 58, 48, 70] };
+        const [kind, color, intensity, softness, spread] = map[button.dataset.light];
+        const light = { id: `light-${Date.now()}`, kind, x: 260 + activeShot().lights.length * 70, y: 160 + activeShot().lights.length * 35, tx: 475, ty: 340, color, intensity, softness, spread, visible: kind === "neon" };
+        activeShot().lights.push(light); selected = { type: "light", id: light.id }; syncControls(); draw();
+      }));
+      document.querySelectorAll("[data-prop]").forEach(button => button.addEventListener("click", () => {
+        const base = propPresets[button.dataset.prop];
+        const prop = { id: `prop-${Date.now()}`, ...base, x: 260 + activeShot().props.length * 70, y: 280 + activeShot().props.length * 35 };
+        activeShot().props.push(prop); selected = { type: "prop", id: prop.id }; draw();
+      }));
+      document.querySelectorAll("[data-template]").forEach(button => button.addEventListener("click", () => {
+        const next = baseShot(`shot-${Date.now()}`, button.textContent.trim());
+        if (button.dataset.template === "hero") next.camera = { id: "camera-1", scale: "medium", ...structuredClone(presets.dolly) };
+        if (button.dataset.template === "product") {
+          next.camera = { id: "camera-1", scale: "close-up", ...structuredClone(presets.dolly), movement: "static", lens: 70, duration: 5 };
+          next.props = [{ id: "prop-product", ...propPresets.product, x: 500, y: 385 }];
+          next.mood = "mysterious";
+        }
+        project.shots.push(next); project.activeId = next.id; selected = { type: "camera", id: "camera-1" }; syncControls(); draw();
+      }));
+      document.getElementById("addShot").addEventListener("click", () => {
+        const next = structuredClone(activeShot());
+        next.id = `shot-${Date.now()}`; next.title = `Shot ${project.shots.length + 1}`;
+        project.shots.push(next); project.activeId = next.id; selected = { type: "camera", id: "camera-1" }; syncControls(); draw();
+      });
+      document.getElementById("reset").addEventListener("click", reset);
+      document.getElementById("copy").addEventListener("click", () => navigator.clipboard.writeText(controls.prompt.value));
+      document.getElementById("format").addEventListener("change", updatePrompt);
+      document.getElementById("saveProject").addEventListener("click", () => {
+        const blob = new Blob([JSON.stringify(project, null, 2)], { type: "application/json" });
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "shot-builder-project.json"; a.click(); URL.revokeObjectURL(a.href);
+      });
+      document.getElementById("loadProject").addEventListener("click", () => document.getElementById("loadFile").click());
+      document.getElementById("loadFile").addEventListener("change", event => {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => { project = JSON.parse(reader.result); selected = { type: "camera", id: "camera-1" }; syncControls(); draw(); };
+        reader.readAsText(file);
+      });
+      document.getElementById("addRef").addEventListener("click", () => document.getElementById("refFile").click());
+      document.getElementById("refFile").addEventListener("change", event => {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          activeShot().reference = reader.result;
+          const img = document.getElementById("reference"); img.src = reader.result; img.hidden = false;
+        };
+        reader.readAsDataURL(file);
+      });
+      reset();
+    </script>
+  </body>
+</html>
